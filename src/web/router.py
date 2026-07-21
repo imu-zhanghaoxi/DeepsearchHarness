@@ -18,6 +18,9 @@ from src.core.context import ContextBuilder
 from src.core.loop import QueryParams, query_loop
 from src.core.tool import ToolRegistry, build_default_registry
 from src.core.types import EventType, Message
+from src.hooks.builtin_hooks import build_default_hooks
+from src.hooks.engine import HookEngine
+from src.hooks.plan_completeness_hook import PlanCompletenessHook
 from src.llm.client import LLMClient, ModelConfig, set_shared_config
 
 logger = logging.getLogger(__name__)
@@ -44,7 +47,17 @@ def _tools_config(settings: dict) -> dict:
     return tools
 
 
-def _build_app_state(settings: dict) -> tuple[ModelConfig, LLMClient, ToolRegistry, ContextBuilder, dict]:
+def _build_hook_engine(settings: dict) -> HookEngine:
+    engine = HookEngine()
+    for hook in build_default_hooks(settings.get("hooks", {})):
+        engine.register_stop_hook(hook)
+    engine.register_stop_hook(PlanCompletenessHook())
+    return engine
+
+
+def _build_app_state(
+    settings: dict,
+) -> tuple[ModelConfig, LLMClient, ToolRegistry, ContextBuilder, HookEngine, dict]:
     model_config = ModelConfig.from_settings("config/settings.yaml")
     set_shared_config(model_config)
 
@@ -55,6 +68,7 @@ def _build_app_state(settings: dict) -> tuple[ModelConfig, LLMClient, ToolRegist
     tool_registry = build_default_registry(tools_cfg)
     llm_client = LLMClient(model_config)
     context_builder = ContextBuilder()
+    hook_engine = _build_hook_engine(settings)
 
     runtime = {
         "max_turns": int(limits.get("max_turns", 40)),
@@ -62,13 +76,16 @@ def _build_app_state(settings: dict) -> tuple[ModelConfig, LLMClient, ToolRegist
         "max_fetch": int(limits.get("max_fetch", 30)),
         "cache_dir": cache_dir,
         "max_query_length": 10000,
+        "compact_threshold_tokens": int(limits.get("compact_threshold_tokens", 80000)),
     }
-    return model_config, llm_client, tool_registry, context_builder, runtime
+    return model_config, llm_client, tool_registry, context_builder, hook_engine, runtime
 
 
 def create_app(settings: dict | None = None) -> FastAPI:
     settings = settings or _load_settings()
-    model_config, llm_client, tool_registry, context_builder, runtime = _build_app_state(settings)
+    model_config, llm_client, tool_registry, context_builder, hook_engine, runtime = _build_app_state(
+        settings
+    )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -95,6 +112,7 @@ def create_app(settings: dict | None = None) -> FastAPI:
             "status": "ok",
             "model": model_config.default_model,
             "tools": [t.name for t in tool_registry.all_tools()],
+            "hooks": [h.name for h in hook_engine.stop_hooks],
         }
 
     @app.websocket("/ws/search")
@@ -145,8 +163,10 @@ def create_app(settings: dict | None = None) -> FastAPI:
                     max_turns=runtime["max_turns"],
                     max_search=runtime["max_search"],
                     max_fetch=runtime["max_fetch"],
+                    hook_engine=hook_engine,
                     session_id=session_id,
                     cache_dir=runtime["cache_dir"],
+                    compact_threshold_tokens=runtime["compact_threshold_tokens"],
                 )
 
                 final_answer = ""

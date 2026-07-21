@@ -3,12 +3,15 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, AsyncGenerator
+from urllib.parse import urlsplit, urlunsplit
 
 from src.core.tool import ToolRegistry, ToolUseContext
 from src.core.types import (
+    Citation,
     ContentBlock,
     EventType,
     LoopState,
@@ -34,11 +37,12 @@ class QueryParams:
     max_turns: int = 40
     max_search: int = 30
     max_fetch: int = 30
-    hook_engine: object | None = None  # P1
+    hook_engine: object | None = None
     cache_dir: str = "./cache"
     session_id: str = ""
     rate_limiter: Any = None
     tool_result_preview_chars: int = 2000
+    compact_threshold_tokens: int = 80000
 
 
 async def query_loop(params: QueryParams) -> AsyncGenerator[StreamEvent, None]:
@@ -84,6 +88,26 @@ async def query_loop(params: QueryParams) -> AsyncGenerator[StreamEvent, None]:
             async for event in _final_answer(state, params):
                 yield event
             break
+
+        try:
+            from src.core.compact import compact_messages, should_compact
+
+            if should_compact(state.messages, params.compact_threshold_tokens):
+                yield StreamEvent(
+                    type=EventType.STATUS,
+                    data={"message": "Compacting context..."},
+                )
+                state.messages = await compact_messages(
+                    state.messages,
+                    params.compact_threshold_tokens,
+                )
+                state.compaction_count += 1
+                yield StreamEvent(
+                    type=EventType.STATUS,
+                    data={"message": f"Context compacted (#{state.compaction_count})"},
+                )
+        except ImportError:
+            pass
 
         api_messages = [msg.to_api_dict() for msg in state.messages]
         tool_calls: list[dict] = []
@@ -150,6 +174,14 @@ async def query_loop(params: QueryParams) -> AsyncGenerator[StreamEvent, None]:
             state.messages.append(Message(role="assistant", content=full_text))
 
         if not tool_calls:
+            should_continue, feedback = await _run_stop_hooks(state, params)
+            if should_continue and feedback:
+                yield StreamEvent(
+                    type=EventType.STATUS,
+                    data={"message": f"Quality check: {feedback}"},
+                )
+                state.messages.append(Message(role="user", content=feedback))
+                continue
             break
 
         allowed_tool_calls, skipped_tool_calls = _filter_tool_calls_by_limits(tool_calls, state, params)
@@ -212,13 +244,44 @@ async def query_loop(params: QueryParams) -> AsyncGenerator[StreamEvent, None]:
                     data=citation.to_dict(),
                 )
 
+        if state.research_plan is not None:
+            yield StreamEvent(
+                type=EventType.PLAN_UPDATE,
+                data=state.research_plan.to_dict(),
+            )
+
+        already_nudged = any(
+            "plan_nudge" in (m.metadata.get("_tag", "") or "")
+            for m in state.messages
+        )
+        if not already_nudged:
+            search_count = sum(
+                1
+                for m in state.messages
+                if m.role == "tool" and m.metadata.get("tool_name") in _SEARCH_TOOLS
+            )
+            if state.research_plan is None and search_count >= 3:
+                state.messages.append(
+                    Message(
+                        role="user",
+                        content=(
+                            "You've done several searches without creating a research plan. "
+                            "This query appears to have multiple aspects. Please use "
+                            "research_plan(action='create') now to organize your remaining "
+                            "research into sub-tasks before continuing."
+                        ),
+                        metadata={"_tag": "plan_nudge"},
+                    )
+                )
+
     final_answer = _last_assistant_message(state.messages) or ""
+    final_citations = _final_citations_for_answer(state.citations, final_answer)
 
     yield StreamEvent(
         type=EventType.STATUS,
         data={
             "message": (
-                f"Research complete. {len(state.citations)} sources cited. "
+                f"Research complete. {len(final_citations)} sources cited. "
                 f"Turns: {state.turn_count}."
             ),
         },
@@ -231,7 +294,7 @@ async def query_loop(params: QueryParams) -> AsyncGenerator[StreamEvent, None]:
         type=EventType.DONE,
         data={
             "final_answer": final_answer,
-            "citations": [c.to_dict() for c in state.citations],
+            "citations": [c.to_dict() for c in final_citations],
             "turn_count": state.turn_count,
             "compaction_count": state.compaction_count,
         },
@@ -422,6 +485,25 @@ def _extract_research_query(messages: list[Message]) -> str:
     return ""
 
 
+async def _run_stop_hooks(
+    state: LoopState,
+    params: QueryParams,
+) -> tuple[bool, str | None]:
+    """Run stop hooks before finalizing. Returns (should_continue, feedback)."""
+    if params.hook_engine is None:
+        return False, None
+
+    try:
+        hook_engine = params.hook_engine
+        if hasattr(hook_engine, "run_stop_hooks"):
+            result = await hook_engine.run_stop_hooks(state)
+            return result.should_continue, getattr(result, "feedback", None)
+    except Exception as e:
+        logger.warning(f"Stop hook error (ignoring): {e}")
+
+    return False, None
+
+
 def _last_assistant_message(messages: list[Message]) -> str | None:
     for msg in reversed(messages):
         if msg.role == "assistant":
@@ -429,3 +511,89 @@ def _last_assistant_message(messages: list[Message]) -> str | None:
             if text:
                 return text
     return None
+
+
+def _final_citations_for_answer(
+    citations: list[Citation],
+    final_answer: str,
+) -> list[Citation]:
+    """
+    Return only sources actually used by the final answer.
+
+    Search/fetch tools discover many candidate citations. Prefer URLs that
+    appear in the final markdown. If the answer contains no URLs, fall back
+    to explicit cite_source registrations.
+    """
+    answer_urls = _extract_urls(final_answer)
+    if answer_urls:
+        citations_by_url: dict[str, Citation] = {}
+        for citation in citations:
+            key = _normalize_url(citation.url)
+            if not key:
+                continue
+            existing = citations_by_url.get(key)
+            if existing is None or (citation.cited and not existing.cited):
+                citations_by_url[key] = citation
+
+        final: list[Citation] = []
+        seen: set[str] = set()
+        for key, raw_url in answer_urls:
+            if key in seen:
+                continue
+            seen.add(key)
+            citation = citations_by_url.get(key)
+            if citation is not None:
+                final.append(citation)
+            else:
+                final.append(Citation(url=raw_url, title=raw_url, snippet="", cited=True))
+        return final
+
+    return _dedupe_citations([citation for citation in citations if citation.cited])
+
+
+def _dedupe_citations(citations: list[Citation]) -> list[Citation]:
+    deduped: list[Citation] = []
+    seen: set[str] = set()
+    for citation in citations:
+        key = _normalize_url(citation.url)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(citation)
+    return deduped
+
+
+def _extract_urls(text: str) -> list[tuple[str, str]]:
+    urls: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for match in re.finditer(r"\]\(((?:https?|file)://[^)\s]+)\)", text):
+        raw_url = _clean_url(match.group(1))
+        key = _normalize_url(raw_url)
+        if key and key not in seen:
+            seen.add(key)
+            urls.append((key, raw_url))
+    for match in re.finditer(r"(?:https?|file)://[^\s<>\])]+", text):
+        raw_url = _clean_url(match.group(0))
+        key = _normalize_url(raw_url)
+        if key and key not in seen:
+            seen.add(key)
+            urls.append((key, raw_url))
+    return urls
+
+
+def _clean_url(url: str) -> str:
+    return url.strip().rstrip(".,;:!?\"'")
+
+
+def _normalize_url(url: str) -> str:
+    cleaned = _clean_url(url)
+    if not cleaned:
+        return ""
+    try:
+        parts = urlsplit(cleaned)
+    except ValueError:
+        return cleaned
+    scheme = parts.scheme.lower()
+    netloc = parts.netloc.lower()
+    path = parts.path.rstrip("/") or "/"
+    return urlunsplit((scheme, netloc, path, parts.query, ""))

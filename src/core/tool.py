@@ -159,6 +159,8 @@ def build_default_registry(config: dict | None = None) -> ToolRegistry:
         config: Optional dict of tool configuration from settings.yaml.
                 Keys like "web_search_default_results", "searxng_url", etc.
     """
+    from src.tools.cite_source import CiteSourceTool
+    from src.tools.research_plan import ResearchPlanTool
     from src.tools.web_fetch import WebFetchTool
     from src.tools.web_search import WebSearchTool
 
@@ -183,5 +185,7 @@ def build_default_registry(config: dict | None = None) -> ToolRegistry:
             extraction_threshold=cfg.get("content_extraction_threshold", 15000),
         )
     )
+    registry.register(CiteSourceTool())
+    registry.register(ResearchPlanTool())
     return registry
 

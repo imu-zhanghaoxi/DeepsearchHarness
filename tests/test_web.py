@@ -16,6 +16,10 @@ def test_health_endpoint():
     assert "model" in data
     assert "search_web" in data["tools"]
     assert "fetch_url" in data["tools"]
+    assert "cite_source" in data["tools"]
+    assert "research_plan" in data["tools"]
+    assert "citation_quality" in data["hooks"]
+    assert "plan_completeness" in data["hooks"]
 
 
 def test_index_page():

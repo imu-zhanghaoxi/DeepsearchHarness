@@ -75,7 +75,12 @@ async def test_loop_search_then_answer():
             [
                 StreamEvent(
                     type=EventType.TEXT_DELTA,
-                    data={"text": "Python asyncio helps write concurrent code."},
+                    data={
+                        "text": (
+                            "Python asyncio helps write concurrent code. "
+                            "See [Example](https://example.com)."
+                        ),
+                    },
                 ),
             ],
         ]

@@ -162,6 +162,61 @@ class StreamEvent:
 
 
 @dataclass
+class ResearchTask:
+    """A single sub-task in a research plan."""
+    id: str
+    title: str
+    details: str = ""
+    status: Literal["pending", "in_progress", "completed"] = "pending"
+    findings: str = ""
+
+
+@dataclass
+class ResearchPlan:
+    """Structured research plan for complex queries."""
+    tasks: list[ResearchTask] = field(default_factory=list)
+
+    def get_task(self, task_id: str) -> ResearchTask | None:
+        return next((t for t in self.tasks if t.id == task_id), None)
+
+    @property
+    def completed_count(self) -> int:
+        return sum(1 for t in self.tasks if t.status == "completed")
+
+    @property
+    def is_complete(self) -> bool:
+        return bool(self.tasks) and all(t.status == "completed" for t in self.tasks)
+
+    def summary(self) -> str:
+        lines = []
+        for t in self.tasks:
+            icon = {"pending": "○", "in_progress": "◉", "completed": "●"}[t.status]
+            lines.append(f"{icon} [{t.id}] {t.title} — {t.status}")
+            if t.findings:
+                lines.append(f"  → {t.findings[:150]}")
+        progress = f"{self.completed_count}/{len(self.tasks)} completed"
+        lines.append(f"\nProgress: {progress}")
+        return "\n".join(lines)
+
+    def to_dict(self) -> dict:
+        return {
+            "tasks": [
+                {
+                    "id": t.id,
+                    "title": t.title,
+                    "details": t.details,
+                    "status": t.status,
+                    "findings": t.findings,
+                }
+                for t in self.tasks
+            ],
+            "completed_count": self.completed_count,
+            "total_count": len(self.tasks),
+            "is_complete": self.is_complete,
+        }
+
+
+@dataclass
 class LoopState:
     """
     Mutable state carried between iterations of the agentic loop.
@@ -175,6 +230,7 @@ class LoopState:
     compaction_count: int = 0
     search_count: int = 0  # Number of search tool calls (web, academic, news)
     fetch_count: int = 0   # Number of web_fetch tool calls
+    research_plan: ResearchPlan | None = None
 
 
 @dataclass

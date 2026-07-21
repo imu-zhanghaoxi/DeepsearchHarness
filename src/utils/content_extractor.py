@@ -63,9 +63,7 @@ async def extract_content(
         )
 
         if not result or len(result.strip()) < 50:
-            logger.warning(
-                f"Extraction returned insufficient content for {source_url}"
-            )
+            logger.warning(f"Extraction returned insufficient content for {source_url}")
             return None
 
         logger.info(

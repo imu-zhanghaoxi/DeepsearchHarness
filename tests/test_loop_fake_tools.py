@@ -43,7 +43,9 @@ class FakeLLMClient(LLMClient):
         self._script = list(script)
         self._call_index = 0
 
-    async def stream(self, messages, system_prompt, tools=None, **kwargs) -> AsyncGenerator[StreamEvent, None]:
+    async def stream(
+        self, messages, system_prompt, tools=None, **kwargs
+    ) -> AsyncGenerator[StreamEvent, None]:
         del messages, system_prompt, tools, kwargs
         if self._call_index >= len(self._script):
             yield StreamEvent(type=EventType.TEXT_DELTA, data={"text": "Default final answer."})

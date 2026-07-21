@@ -375,7 +375,9 @@ class TestSideQuery:
         response = _non_stream_response(content='{"score": 1}')
         cfg = ModelConfig(api_key="k", base_url="https://example.com/v1")
 
-        with patch("src.llm.client.litellm.acompletion", new=AsyncMock(return_value=response)) as mock:
+        with patch(
+            "src.llm.client.litellm.acompletion", new=AsyncMock(return_value=response)
+        ) as mock:
             result = await side_query(
                 "rate this",
                 system="be concise",

@@ -83,6 +83,7 @@ class ModelConfig:
 
         try:
             import yaml
+
             with open(path) as f:
                 data = yaml.safe_load(f) or {}
             llm = data.get("llm", {})
@@ -201,8 +202,7 @@ class LLMClient:
 
                 delay = (self.config.retry_base_delay_ms / 1000) * (2 ** (attempt - 1))
                 logger.info(
-                    f"Retrying in {delay:.1f}s "
-                    f"(attempt {attempt}/{self.config.max_retries})..."
+                    f"Retrying in {delay:.1f}s (attempt {attempt}/{self.config.max_retries})..."
                 )
                 yield StreamEvent(
                     type=EventType.STATUS,
@@ -345,10 +345,7 @@ async def side_query(
 
     if output_schema:
         schema_hint = json.dumps(output_schema, ensure_ascii=False)
-        hint = (
-            "\n\nRespond with a single JSON object matching this schema:\n"
-            + schema_hint
-        )
+        hint = "\n\nRespond with a single JSON object matching this schema:\n" + schema_hint
         if messages[0]["role"] == "system":
             messages[0]["content"] += hint
         else:

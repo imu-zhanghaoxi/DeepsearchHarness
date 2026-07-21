@@ -86,7 +86,7 @@ class ResearchPlanTool(Tool):
         "required": ["action"],
     }
 
-    is_concurrency_safe = False   # Mutates LoopState — must be sequential
+    is_concurrency_safe = False  # Mutates LoopState — must be sequential
     is_read_only = False
     max_result_size_chars = 10000
 
@@ -213,12 +213,14 @@ Action: Skip plan, search directly.
         # Build ResearchTask objects with auto-assigned IDs
         tasks = []
         for i, t in enumerate(tasks_input, start=1):
-            tasks.append(ResearchTask(
-                id=str(i),
-                title=t["title"],
-                details=t.get("details", ""),
-                status="pending",
-            ))
+            tasks.append(
+                ResearchTask(
+                    id=str(i),
+                    title=t["title"],
+                    details=t.get("details", ""),
+                    status="pending",
+                )
+            )
 
         plan = ResearchPlan(tasks=tasks)
         loop_state.research_plan = plan

@@ -6,10 +6,12 @@ from datetime import datetime
 from enum import Enum
 from typing import Literal
 
+
 class SourceType(str, Enum):
     WEB = "web"
     ACADEMIC = "academic"
     NEWS = "news"
+
 
 @dataclass
 class Citation:
@@ -32,9 +34,10 @@ class Citation:
             "cited": self.cited,
         }
 
+
 @dataclass
 class ContentBlock:
-    type: Literal["text", "tool_use","tool_result","reasoning"]
+    type: Literal["text", "tool_use", "tool_result", "reasoning"]
     text: str | None = None
     tool_name: str | None = None
     tool_use_id: str | None = None
@@ -91,14 +94,16 @@ class Message:
                 if block.type == "text" and block.text:
                     text_parts.append(block.text)
                 elif block.type == "tool_use":
-                    tool_calls.append({
-                        "id": block.tool_use_id,
-                        "type": "function",
-                        "function": {
-                            "name": block.tool_name,
-                            "arguments": json.dumps(block.tool_input or {}),
-                        },
-                    })
+                    tool_calls.append(
+                        {
+                            "id": block.tool_use_id,
+                            "type": "function",
+                            "function": {
+                                "name": block.tool_name,
+                                "arguments": json.dumps(block.tool_input or {}),
+                            },
+                        }
+                    )
 
             if text_parts:
                 msg["content"] = " ".join(text_parts)
@@ -126,6 +131,7 @@ class ToolResult:
     data is the main output, citations are accumulated across the
     session, and cached_path points to the full content when truncated.
     """
+
     data: str
     citations: list[Citation] = field(default_factory=list)
     truncated: bool = False
@@ -146,6 +152,7 @@ class EventType(str, Enum):
     PLAN_UPDATE = "plan_update"
     USER_QUESTION = "user_question"
 
+
 @dataclass
 class StreamEvent:
     """
@@ -154,6 +161,7 @@ class StreamEvent:
     The loop is an AsyncGenerator that yields these, completely
     decoupled from the presentation layer.
     """
+
     type: EventType
     data: dict = field(default_factory=dict)
 
@@ -164,6 +172,7 @@ class StreamEvent:
 @dataclass
 class ResearchTask:
     """A single sub-task in a research plan."""
+
     id: str
     title: str
     details: str = ""
@@ -174,6 +183,7 @@ class ResearchTask:
 @dataclass
 class ResearchPlan:
     """Structured research plan for complex queries."""
+
     tasks: list[ResearchTask] = field(default_factory=list)
 
     def get_task(self, task_id: str) -> ResearchTask | None:
@@ -224,12 +234,13 @@ class LoopState:
     The loop destructures this at the top of each iteration and
     creates a new one at each continue site.
     """
+
     messages: list[Message]
     turn_count: int = 0
     citations: list[Citation] = field(default_factory=list)
     compaction_count: int = 0
     search_count: int = 0  # Number of search tool calls (web, academic, news)
-    fetch_count: int = 0   # Number of web_fetch tool calls
+    fetch_count: int = 0  # Number of web_fetch tool calls
     research_plan: ResearchPlan | None = None
 
 

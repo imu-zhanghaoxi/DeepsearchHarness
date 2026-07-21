@@ -62,8 +62,28 @@ function handleEvent(event) {
     const div = document.createElement("div");
     div.className = "tool-line";
     const input = data.tool_input || {};
-    const preview = input.query || input.url || JSON.stringify(input);
+    const preview = input.query || input.url || input.skill || JSON.stringify(input);
     div.textContent = `Tool: ${data.tool_name} — ${preview}`;
+    outputEl.appendChild(div);
+    return;
+  }
+
+  if (type === "tool_result") {
+    const div = document.createElement("div");
+    div.className = "tool-line";
+    const preview = (data.result || "").slice(0, 200);
+    div.textContent = `Result (${data.tool_name}): ${preview}`;
+    outputEl.appendChild(div);
+    return;
+  }
+
+  if (type === "plan_update") {
+    const tasks = data.tasks || [];
+    const completed = data.completed_count || 0;
+    const total = data.total_count || tasks.length;
+    const div = document.createElement("div");
+    div.className = "tool-line";
+    div.textContent = `Research plan: ${completed}/${total} completed`;
     outputEl.appendChild(div);
     return;
   }

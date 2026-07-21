@@ -82,17 +82,17 @@ async def _needs_research(state: LoopState) -> bool:
         from src.llm.client import side_query
 
         response = await side_query(
-            prompt=f"User query: \"{first_user_msg}\"",
+            prompt=f'User query: "{first_user_msg}"',
             system=(
                 "Classify whether this user query requires web research and citations "
                 "to answer properly. Return a JSON object with a single boolean field.\n\n"
-                "Return {\"needs_research\": false} for:\n"
+                'Return {"needs_research": false} for:\n'
                 "- Greetings, farewells, thanks\n"
                 "- Identity questions about the assistant itself\n"
                 "- Simple chitchat or conversational remarks\n"
                 "- Requests that are about the assistant's capabilities\n"
                 "- Any query the assistant can answer from its own nature\n\n"
-                "Return {\"needs_research\": true} for:\n"
+                'Return {"needs_research": true} for:\n'
                 "- Factual questions about the world\n"
                 "- Questions requiring up-to-date information\n"
                 "- Technical, scientific, or domain-specific questions\n"
@@ -115,7 +115,7 @@ async def _needs_research(state: LoopState) -> bool:
         parsed = json.loads(response)
         result = parsed.get("needs_research", True)
         if not result:
-            logger.info(f"Query classified as non-research: \"{first_user_msg[:80]}\"")
+            logger.info(f'Query classified as non-research: "{first_user_msg[:80]}"')
         _research_cache[cache_key] = result
         return result
 
@@ -138,6 +138,7 @@ class CitationQualityHook(Hook):
     "search more". This avoids a wasted turn where the agent blindly
     re-researches topics it already understands from memory.
     """
+
     name = "citation_quality"
     description = "Ensures the answer has enough citations"
 
@@ -196,6 +197,7 @@ class SourceDiversityHook(Hook):
     If all citations come from the same domain, it forces the agent
     to find corroborating sources from different domains.
     """
+
     name = "source_diversity"
     description = "Ensures citations come from diverse sources"
 
@@ -215,6 +217,7 @@ class SourceDiversityHook(Hook):
 
         # Extract unique domains
         from urllib.parse import urlparse
+
         domains = set()
         for citation in cited:
             try:
@@ -245,6 +248,7 @@ class AnswerCompletenessHook(Hook):
     If the assistant's last message is too short, it's likely incomplete
     or a cop-out ("I couldn't find information").
     """
+
     name = "answer_completeness"
     description = "Ensures the answer is substantive"
 

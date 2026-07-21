@@ -36,7 +36,9 @@ class FakeLLMClient(LLMClient):
         self._script = list(script)
         self._call_index = 0
 
-    async def stream(self, messages, system_prompt, tools=None, **kwargs) -> AsyncGenerator[StreamEvent, None]:
+    async def stream(
+        self, messages, system_prompt, tools=None, **kwargs
+    ) -> AsyncGenerator[StreamEvent, None]:
         del messages, system_prompt, tools, kwargs
         if self._call_index >= len(self._script):
             yield StreamEvent(type=EventType.TEXT_DELTA, data={"text": "Fallback final answer."})
@@ -118,9 +120,7 @@ async def test_loop_stop_hook_forces_extra_turn():
 
     events = [event async for event in query_loop(params)]
     status_messages = [
-        event.data.get("message", "")
-        for event in events
-        if event.type == EventType.STATUS
+        event.data.get("message", "") for event in events if event.type == EventType.STATUS
     ]
 
     assert any("Quality check" in message for message in status_messages)

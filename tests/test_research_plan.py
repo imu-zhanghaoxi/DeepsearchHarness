@@ -84,7 +84,9 @@ class TestResearchPlanCall:
         assert "1 sub-task(s) remaining" in check_result.data
 
     @pytest.mark.asyncio
-    async def test_complete_plan_reports_ready(self, tool: ResearchPlanTool, context: ToolUseContext):
+    async def test_complete_plan_reports_ready(
+        self, tool: ResearchPlanTool, context: ToolUseContext
+    ):
         await tool.call(
             {"action": "create", "tasks": [{"title": "Only task"}]},
             context,

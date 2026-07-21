@@ -48,7 +48,9 @@ def should_compact(
     """
     total = sum(estimate_tokens(msg.text_content) for msg in messages)
     if total > threshold_tokens:
-        logger.info(f"Context at ~{total:,} tokens, threshold is {threshold_tokens:,} — compaction needed")
+        logger.info(
+            f"Context at ~{total:,} tokens, threshold is {threshold_tokens:,} — compaction needed"
+        )
         return True
     return False
 
@@ -124,11 +126,13 @@ def _microcompact(
         if msg.role == "tool":
             content = msg.text_content
             if len(content) > MICROCOMPACT_MIN_SIZE:
-                result.append(Message(
-                    role=msg.role,
-                    content=CLEARED_TOOL_RESULT,
-                    metadata=msg.metadata,
-                ))
+                result.append(
+                    Message(
+                        role=msg.role,
+                        content=CLEARED_TOOL_RESULT,
+                        metadata=msg.metadata,
+                    )
+                )
             else:
                 result.append(msg)
         else:
@@ -273,14 +277,13 @@ async def _full_compact(messages: list[Message]) -> list[Message]:
             break
 
     # Add the summary as an assistant message
-    compacted.append(Message(
-        role="assistant",
-        content=(
-            "[Previous research has been summarized to save context space]\n\n"
-            f"{summary}"
-        ),
-        metadata={"compacted": True},
-    ))
+    compacted.append(
+        Message(
+            role="assistant",
+            content=(f"[Previous research has been summarized to save context space]\n\n{summary}"),
+            metadata={"compacted": True},
+        )
+    )
 
     # Keep the last assistant message if it exists and is different
     for msg in reversed(messages):

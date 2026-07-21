@@ -22,7 +22,9 @@ class TestExtractContent:
     async def test_calls_side_query_and_returns_summary(self):
         with patch(
             "src.utils.content_extractor.side_query",
-            new=AsyncMock(return_value="## Example\n**Source**: https://example.com\n\nFacts here."),
+            new=AsyncMock(
+                return_value="## Example\n**Source**: https://example.com\n\nFacts here."
+            ),
         ) as mock_side_query:
             result = await extract_content(
                 raw_content="raw " * 100,

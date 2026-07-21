@@ -60,7 +60,9 @@ class WebSearchTool(Tool):
         engines: str = "",
         language: str = "auto",
     ):
-        self.searxng_url = (searxng_url or os.environ.get("SEARXNG_URL") or _DEFAULT_SEARXNG_URL).rstrip("/")
+        self.searxng_url = (
+            searxng_url or os.environ.get("SEARXNG_URL") or _DEFAULT_SEARXNG_URL
+        ).rstrip("/")
         self.default_results = default_results
         self.max_results = max_results
         self.max_result_size_chars = max_result_size_chars
@@ -111,11 +113,7 @@ class WebSearchTool(Tool):
             url = result.get("link", result.get("url", ""))
             snippet = result.get("snippet", "No description available")
 
-            formatted_parts.append(
-                f"### {i}. {title}\n"
-                f"**URL**: {url}\n"
-                f"**Snippet**: {snippet}\n"
-            )
+            formatted_parts.append(f"### {i}. {title}\n**URL**: {url}\n**Snippet**: {snippet}\n")
             if url:
                 citations.append(
                     Citation(
@@ -127,9 +125,7 @@ class WebSearchTool(Tool):
                 )
 
         formatted = "\n".join(formatted_parts)
-        formatted, truncated, cached_path = await self._maybe_truncate(
-            formatted, query, context
-        )
+        formatted, truncated, cached_path = await self._maybe_truncate(formatted, query, context)
 
         return ToolResult(
             data=formatted,

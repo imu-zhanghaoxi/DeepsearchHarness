@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DeepsearchHarness</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px;
+      background: #f7f7f8;
+      color: #1a1a1a;
+    }
+    h1 { margin: 0 0 8px; font-size: 1.5rem; }
+    .sub { color: #666; margin-bottom: 20px; }
+    .status {
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+    }
+    .status.ok { border-color: #86efac; }
+    .status.err { border-color: #fca5a5; }
+    form { display: flex; gap: 8px; margin-bottom: 16px; }
+    textarea {
+      flex: 1;
+      min-height: 72px;
+      padding: 12px;
+      border: 1px solid #d4d4d4;
+      border-radius: 8px;
+      resize: vertical;
+      font: inherit;
+    }
+    button {
+      padding: 0 20px;
+      border: none;
+      border-radius: 8px;
+      background: #2563eb;
+      color: #fff;
+      font: inherit;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #output {
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      padding: 16px;
+      min-height: 200px;
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+    .tool-line {
+      color: #555;
+      font-size: 0.9rem;
+      margin: 8px 0;
+      padding: 8px;
+      background: #f3f4f6;
+      border-radius: 6px;
+    }
+    .meta { color: #666; font-size: 0.85rem; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <h1>DeepsearchHarness</h1>
+  <p class="sub">Web research agent — search, read, answer with citations.</p>
+
+  <div id="status" class="status">Connecting...</div>
+
+  <form id="form">
+    <textarea id="query" placeholder="Ask anything..." autofocus></textarea>
+    <button type="submit" id="submit" disabled>Send</button>
+  </form>
+
+  <div id="output"></div>
+  <div id="meta" class="meta"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

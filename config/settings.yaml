@@ -1,11 +1,14 @@
 llm:
+  # Bare model id is fine; client prefixes openai/ for custom api_base.
+  # Or write litellm style: "openai/qwen-plus", "deepseek/deepseek-chat"
   default_model: "qwen-plus"
   side_query_model: "qwen-turbo"
   fallback_model: "qwen-turbo"
   max_tokens: 8192
   base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
-  side_query_base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
-  api_key: "sk-791f4ffe31b349d59801b5d921fbf8b2"
+  side_query_base_url: ""
+  # Prefer env OPENAI_API_KEY or DASHSCOPE_API_KEY; leave blank here in git.
+  api_key: ""
   max_retries: 3
   retry_base_delay_ms: 500
   stream: true
@@ -19,6 +22,10 @@ limits:
 
 tools:
   cache_dir: "./cache"
+  # Self-hosted SearXNG (docker run -d -p 8080:8080 searxng/searxng)
+  searxng_url: "http://127.0.0.1:8080"
+  searxng_engines: ""        # optional, e.g. "google,bing"
+  searxng_language: "auto"
   web_search_default_results: 10
   web_search_max_results: 20
   max_result_size_chars: 20000

@@ -45,7 +45,7 @@ class QueryParams:
     compact_threshold_tokens: int = 80000
 
 
-async def query_loop(params: QueryParams) -> AsyncGenerator[StreamEvent, None]:
+async def query_loop(params: QueryParams) -> AsyncGenerator[StreamEvent, str | None]:
     state = LoopState(
         messages=list(params.history),
         turn_count=0,
@@ -205,6 +205,20 @@ async def query_loop(params: QueryParams) -> AsyncGenerator[StreamEvent, None]:
             allowed_tool_calls.append(tc)
 
         for tc, result in zip(allowed_tool_calls, tool_results):
+            pending = (result.metadata or {}).get("pending_question")
+            if pending:
+                answer = yield StreamEvent(
+                    type=EventType.USER_QUESTION,
+                    data={
+                        "tool_use_id": tc["tool_use_id"],
+                        "question": pending["question"],
+                        "options": pending["options"],
+                    },
+                )
+                if not answer:
+                    answer = pending["options"][0]["label"] if pending["options"] else ""
+                result = ToolResult(data=f"User answered: {answer}")
+
             result_text = result.data or ""
             streamed_result = result_text[: params.tool_result_preview_chars]
 

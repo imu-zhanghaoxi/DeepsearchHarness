@@ -23,6 +23,7 @@ def test_health_endpoint():
     assert "cite_source" in data["tools"]
     assert "research_plan" in data["tools"]
     assert "deep_read" in data["tools"]
+    assert "ask_user" in data["tools"]
     assert "citation_quality" in data["hooks"]
     assert "plan_completeness" in data["hooks"]
     assert data["memory_enabled"] is False

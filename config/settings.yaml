@@ -22,9 +22,9 @@ limits:
 
 tools:
   cache_dir: "./cache"
-  # Self-hosted SearXNG (docker run -d -p 8080:8080 searxng/searxng)
-  searxng_url: "http://127.0.0.1:8080"
-  searxng_engines: ""        # optional, e.g. "google,bing"
+  # Self-hosted SearXNG — cd searxng && cp .env.example .env && docker compose up -d
+  searxng_url: "http://127.0.0.1:8081"
+  searxng_engines: "baidu,sogou,bing"
   searxng_language: "auto"
   web_search_default_results: 10
   web_search_max_results: 20

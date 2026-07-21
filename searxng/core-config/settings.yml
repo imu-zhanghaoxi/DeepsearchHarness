@@ -1,0 +1,51 @@
+# Minimal overrides for DeepsearchHarness.
+# Default engine list comes from upstream; we only enable the JSON API
+# required by src/tools/web_search.py (format=json).
+#
+# Default engines (brave/duckduckgo/startpage) often time out from Docker
+# in CN. We keep domestic-friendly engines instead.
+# If you have an HTTP proxy, uncomment outgoing.proxies in this file.
+
+use_default_settings:
+  engines:
+    keep_only:
+      - baidu
+      - sogou
+      - bing
+      - 360search
+      - wikipedia
+
+search:
+  formats:
+    - html
+    - json
+  # Prefer faster engines when no explicit engines= param is passed.
+  default_lang: "zh-CN"
+
+server:
+  bind_address: "0.0.0.0"
+  limiter: false
+  public_instance: false
+
+outgoing:
+  request_timeout: 10.0
+
+engines:
+  - name: baidu
+    disabled: false
+  - name: sogou
+    disabled: false
+  - name: bing
+    disabled: false
+    base_url: https://cn.bing.com
+  - name: 360search
+    disabled: false
+  - name: wikipedia
+    disabled: false
+
+# Optional: route outbound search traffic through a local proxy (Clash, etc.)
+# On Docker Desktop / WSL2, host proxy is often host.docker.internal:7890
+# outgoing:
+#   proxies:
+#     all://:
+#       - http://host.docker.internal:7890

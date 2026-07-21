@@ -1,7 +1,7 @@
 """
 System prompt builder.
 
-Assembles the system prompt from multiple layers: base instructions, 
+Assembles the system prompt from multiple layers: base instructions,
 tool prompts, memory, citation guidelines, and date context.
 
 The system prompt is rebuilt at the start of each query loop iteration
@@ -20,7 +20,7 @@ class ContextBuilder:
     """
     Builds the system prompt from layers.
 
-    Combines base instructions with tool-specific prompts, memory context, 
+    Combines base instructions with tool-specific prompts, memory context,
     and research guidelines.
     """
 
@@ -162,7 +162,7 @@ Use memories to:
         now = datetime.now()
         return f"""## Current Date
 
-Today is {now.strftime('%B %d, %Y')} ({now.strftime('%A')}). Use this to:
+Today is {now.strftime("%B %d, %Y")} ({now.strftime("%A")}). Use this to:
 - Assess whether sources are current or outdated
 - Add date qualifiers to searches when relevant
 - Note the recency of information in your response"""

@@ -27,7 +27,7 @@ _CLOUD_METADATA_IPS = {
     "169.254.169.254",  # AWS, GCP, Azure instance metadata
     "metadata.google.internal",  # GCP alias
     "100.100.100.200",  # Alibaba Cloud metadata
-    "fd00:ec2::254",    # AWS IPv6 metadata
+    "fd00:ec2::254",  # AWS IPv6 metadata
 }
 
 # Hostnames that must always be blocked
@@ -47,20 +47,20 @@ _BLOCKED_HOSTNAMES = {
 # as sinkhole addresses.  Legitimate public websites may resolve to these
 # IPs when a DNS filter is in the path.
 _SSRF_BLOCKED_NETWORKS_V4 = [
-    ipaddress.IPv4Network("0.0.0.0/8"),       # "This host on this network" (RFC 1122)
-    ipaddress.IPv4Network("10.0.0.0/8"),      # Private (RFC 1918)
-    ipaddress.IPv4Network("100.64.0.0/10"),   # CGNAT shared address (RFC 6598)
-    ipaddress.IPv4Network("127.0.0.0/8"),     # Loopback (RFC 1122)
+    ipaddress.IPv4Network("0.0.0.0/8"),  # "This host on this network" (RFC 1122)
+    ipaddress.IPv4Network("10.0.0.0/8"),  # Private (RFC 1918)
+    ipaddress.IPv4Network("100.64.0.0/10"),  # CGNAT shared address (RFC 6598)
+    ipaddress.IPv4Network("127.0.0.0/8"),  # Loopback (RFC 1122)
     ipaddress.IPv4Network("169.254.0.0/16"),  # Link-local (RFC 3927)
-    ipaddress.IPv4Network("172.16.0.0/12"),   # Private (RFC 1918)
+    ipaddress.IPv4Network("172.16.0.0/12"),  # Private (RFC 1918)
     ipaddress.IPv4Network("192.168.0.0/16"),  # Private (RFC 1918)
 ]
 
 _SSRF_BLOCKED_NETWORKS_V6 = [
-    ipaddress.IPv6Network("::1/128"),          # Loopback
-    ipaddress.IPv6Network("fc00::/7"),         # Unique local (RFC 4193)
-    ipaddress.IPv6Network("fe80::/10"),        # Link-local (RFC 4291)
-    ipaddress.IPv6Network("::ffff:0:0/96"),    # IPv4-mapped — check the v4 part too
+    ipaddress.IPv6Network("::1/128"),  # Loopback
+    ipaddress.IPv6Network("fc00::/7"),  # Unique local (RFC 4193)
+    ipaddress.IPv6Network("fe80::/10"),  # Link-local (RFC 4291)
+    ipaddress.IPv6Network("::ffff:0:0/96"),  # IPv4-mapped — check the v4 part too
 ]
 
 
@@ -117,9 +117,7 @@ async def validate_url_for_ssrf_async(url: str) -> tuple[bool, str]:
     return _validate_url_common(url, dns_results=dns_results)
 
 
-def _validate_url_common(
-    url: str, dns_results: list[tuple] | None
-) -> tuple[bool, str]:
+def _validate_url_common(url: str, dns_results: list[tuple] | None) -> tuple[bool, str]:
     """
     Core SSRF validation logic shared by sync and async entry points.
 
@@ -158,8 +156,7 @@ def _validate_url_common(
             ip_str = sockaddr[0]
             if _is_ssrf_ip(ip_str):
                 return False, (
-                    f"Blocked: hostname '{hostname}' resolves to private/internal "
-                    f"IP {ip_str}"
+                    f"Blocked: hostname '{hostname}' resolves to private/internal IP {ip_str}"
                 )
 
     return True, ""
@@ -173,7 +170,8 @@ def _sync_dns_resolve(url: str) -> list[tuple] | None:
         if not hostname:
             return None
         return socket.getaddrinfo(
-            hostname, parsed.port or (443 if parsed.scheme == "https" else 80),
+            hostname,
+            parsed.port or (443 if parsed.scheme == "https" else 80),
             proto=socket.IPPROTO_TCP,
         )
     except (socket.gaierror, Exception):
@@ -189,7 +187,8 @@ async def _async_dns_resolve(url: str) -> list[tuple] | None:
             return None
         loop = asyncio.get_running_loop()
         return await loop.getaddrinfo(
-            hostname, parsed.port or (443 if parsed.scheme == "https" else 80),
+            hostname,
+            parsed.port or (443 if parsed.scheme == "https" else 80),
             proto=socket.IPPROTO_TCP,
         )
     except (socket.gaierror, Exception):

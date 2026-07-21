@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class HookEvaluation:
     """Result of a single hook evaluation."""
+
     passed: bool
     feedback: str = ""
 
@@ -31,12 +32,14 @@ class HookEvaluation:
 @dataclass
 class HookResult:
     """Aggregate result from running all hooks at an event."""
+
     should_continue: bool = False
     feedback: str | None = None
 
 
 class Hook(ABC):
     """Base class for all hooks."""
+
     name: str = ""
     description: str = ""
 
@@ -89,6 +92,7 @@ class HookEngine:
             # to prevent unbounded memory growth across sessions.
             try:
                 from src.hooks.builtin_hooks import clear_research_cache
+
                 clear_research_cache()
             except ImportError:
                 pass

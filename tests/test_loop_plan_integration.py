@@ -21,7 +21,9 @@ class FakeLLMClient(LLMClient):
         self._script = list(script)
         self._call_index = 0
 
-    async def stream(self, messages, system_prompt, tools=None, **kwargs) -> AsyncGenerator[StreamEvent, None]:
+    async def stream(
+        self, messages, system_prompt, tools=None, **kwargs
+    ) -> AsyncGenerator[StreamEvent, None]:
         del messages, system_prompt, tools, kwargs
         events = self._script[self._call_index]
         self._call_index += 1
@@ -138,9 +140,7 @@ async def test_plan_completeness_hook_blocks_finalize_until_complete():
 
     events = [event async for event in query_loop(params)]
     status_messages = [
-        event.data.get("message", "")
-        for event in events
-        if event.type == EventType.STATUS
+        event.data.get("message", "") for event in events if event.type == EventType.STATUS
     ]
 
     assert any("Quality check" in message for message in status_messages)

@@ -239,9 +239,7 @@ class WebFetchTool(Tool):
             return None
 
         full_content = f"## {title}\n**Source**: {url}\n\n{markdown}"
-        result = await self._maybe_extract_or_truncate(
-            full_content, url, title, context
-        )
+        result = await self._maybe_extract_or_truncate(full_content, url, title, context)
         citation = Citation(
             url=url,
             title=title,
@@ -316,9 +314,7 @@ class WebFetchTool(Tool):
 
         title = self._extract_title(html, markdown)
         full_content = f"## {title}\n**Source**: {url}\n\n{markdown}"
-        result = await self._maybe_extract_or_truncate(
-            full_content, url, title, context
-        )
+        result = await self._maybe_extract_or_truncate(full_content, url, title, context)
         citation = Citation(
             url=url,
             title=title,

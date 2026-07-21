@@ -82,7 +82,9 @@ class TestWebSearchSearxng:
 
 class TestWebSearchCall:
     @pytest.mark.asyncio
-    async def test_call_formats_results_and_citations(self, tool: WebSearchTool, context: ToolUseContext):
+    async def test_call_formats_results_and_citations(
+        self, tool: WebSearchTool, context: ToolUseContext
+    ):
         with patch.object(
             tool,
             "_search_searxng",
@@ -114,7 +116,9 @@ class TestWebSearchCall:
         assert result.citations == []
 
     @pytest.mark.asyncio
-    async def test_call_respects_num_results_cap(self, tool: WebSearchTool, context: ToolUseContext):
+    async def test_call_respects_num_results_cap(
+        self, tool: WebSearchTool, context: ToolUseContext
+    ):
         with patch.object(tool, "_search_searxng", new=AsyncMock(return_value=[])) as mock_search:
             await tool.call({"query": "python", "num_results": 99}, context)
 

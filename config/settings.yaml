@@ -28,6 +28,14 @@ tools:
   searxng_language: "auto"
   web_search_default_results: 10
   web_search_max_results: 20
+  academic_search_default_results: 5
+  academic_search_max_results: 10
+  news_search_default_results: 5
+  news_search_max_results: 10
+  news_search_default_days_back: 7
+  news_search_max_days_back: 30
+  # Optional: restrict news_search to specific SearXNG news engines (empty = all news engines)
+  searxng_news_engines: ""
   max_result_size_chars: 20000
   http_timeout: 30
   jina_timeout: 60
@@ -46,6 +54,13 @@ memory:
 skills:
   enabled: false
   dirs: ["./skills"]
+  listing_max_chars: 8000
+  max_skill_chars: 50000
+  script_timeout_seconds: 30
+  script_max_output_chars: 20000
+
+sessions:
+  base_dir: "./sessions"
 
 server:
   host: "127.0.0.1"

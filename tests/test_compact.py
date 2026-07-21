@@ -79,13 +79,17 @@ async def test_compact_messages_uses_side_query_when_needed():
         Message(role="assistant", content="Python is a language."),
     ]
 
-    with patch("src.core.compact.should_compact", return_value=True), patch(
-        "src.core.compact._microcompact",
-        return_value=messages,
-    ), patch(
-        "src.llm.client.side_query",
-        new_callable=AsyncMock,
-        return_value="<summary>Summarized findings with https://example.com</summary>",
+    with (
+        patch("src.core.compact.should_compact", return_value=True),
+        patch(
+            "src.core.compact._microcompact",
+            return_value=messages,
+        ),
+        patch(
+            "src.llm.client.side_query",
+            new_callable=AsyncMock,
+            return_value="<summary>Summarized findings with https://example.com</summary>",
+        ),
     ):
         compacted = await compact_messages(messages, threshold_tokens=100)
 

@@ -1,7 +1,5 @@
 """Tests for SSRF URL validation."""
 
-import pytest
-
 from src.utils.url_validator import validate_url_for_ssrf
 
 

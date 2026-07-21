@@ -44,10 +44,7 @@ def main() -> None:
     host = os.environ.get("HOST", host)
     port = int(os.environ.get("PORT", str(port)))
 
-    llm_key = (
-        os.environ.get("OPENAI_API_KEY", "")
-        or os.environ.get("DASHSCOPE_API_KEY", "")
-    )
+    llm_key = os.environ.get("OPENAI_API_KEY", "") or os.environ.get("DASHSCOPE_API_KEY", "")
     if not llm_key:
         logger.warning("No OPENAI_API_KEY / DASHSCOPE_API_KEY — LLM calls will fail until set.")
 

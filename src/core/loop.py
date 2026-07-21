@@ -23,7 +23,7 @@ from src.llm.client import LLMClient
 
 logger = logging.getLogger(__name__)
 
-_SEARCH_TOOLS = frozenset({"search_web"})
+_SEARCH_TOOLS = frozenset({"search_web", "academic_search", "news_search"})
 _FETCH_TOOLS = frozenset({"fetch_url"})
 
 
@@ -71,8 +71,7 @@ async def query_loop(params: QueryParams) -> AsyncGenerator[StreamEvent, None]:
                 type=EventType.STATUS,
                 data={
                     "message": (
-                        f"Reached maximum turns ({params.max_turns}). "
-                        "Synthesizing final answer..."
+                        f"Reached maximum turns ({params.max_turns}). Synthesizing final answer..."
                     ),
                 },
             )
@@ -184,7 +183,9 @@ async def query_loop(params: QueryParams) -> AsyncGenerator[StreamEvent, None]:
                 continue
             break
 
-        allowed_tool_calls, skipped_tool_calls = _filter_tool_calls_by_limits(tool_calls, state, params)
+        allowed_tool_calls, skipped_tool_calls = _filter_tool_calls_by_limits(
+            tool_calls, state, params
+        )
         if allowed_tool_calls:
             yield StreamEvent(
                 type=EventType.STATUS,
@@ -251,8 +252,7 @@ async def query_loop(params: QueryParams) -> AsyncGenerator[StreamEvent, None]:
             )
 
         already_nudged = any(
-            "plan_nudge" in (m.metadata.get("_tag", "") or "")
-            for m in state.messages
+            "plan_nudge" in (m.metadata.get("_tag", "") or "") for m in state.messages
         )
         if not already_nudged:
             search_count = sum(
@@ -276,6 +276,13 @@ async def query_loop(params: QueryParams) -> AsyncGenerator[StreamEvent, None]:
 
     final_answer = _last_assistant_message(state.messages) or ""
     final_citations = _final_citations_for_answer(state.citations, final_answer)
+    plan_findings = ""
+    if state.research_plan and state.research_plan.tasks:
+        plan_findings = "\n".join(
+            f"- {task.title}: {task.findings}"
+            for task in state.research_plan.tasks
+            if task.findings
+        )
 
     yield StreamEvent(
         type=EventType.STATUS,
@@ -297,6 +304,7 @@ async def query_loop(params: QueryParams) -> AsyncGenerator[StreamEvent, None]:
             "citations": [c.to_dict() for c in final_citations],
             "turn_count": state.turn_count,
             "compaction_count": state.compaction_count,
+            "plan_findings": plan_findings,
         },
     )
 
@@ -365,16 +373,11 @@ async def _execute_tools(
         else:
             sequential_indices.append(i)
 
-    results: list[ToolResult] = [
-        ToolResult(data="", is_error=True) for _ in range(len(tool_calls))
-    ]
+    results: list[ToolResult] = [ToolResult(data="", is_error=True) for _ in range(len(tool_calls))]
 
     if parallel_indices:
         parallel_results = await asyncio.gather(
-            *[
-                _execute_single_tool(tool_calls[i], registry, context)
-                for i in parallel_indices
-            ],
+            *[_execute_single_tool(tool_calls[i], registry, context) for i in parallel_indices],
             return_exceptions=True,
         )
         for idx, result in zip(parallel_indices, parallel_results):
@@ -426,7 +429,7 @@ async def _execute_single_tool(
         except Exception as e:
             error_str = str(e)
             if "429" in error_str and attempt < max_retries:
-                await asyncio.sleep(2 ** attempt)
+                await asyncio.sleep(2**attempt)
                 continue
             logger.error(f"Tool {tool_name} execution error: {e}", exc_info=True)
             return ToolResult(

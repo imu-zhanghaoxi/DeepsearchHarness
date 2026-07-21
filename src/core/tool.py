@@ -11,6 +11,7 @@ from src.core.types import ToolResult, ValidationResult
 logger = logging.getLogger(__name__)
 CACHE_DIR = Path("./cache")
 
+
 @dataclass
 class ToolUseContext:
     session_id: str = ""
@@ -23,6 +24,7 @@ class ToolUseContext:
 
     def __post_init__(self):
         self.cache_dir.mkdir(parents=True, exist_ok=True)
+
 
 class Tool(ABC):
     name: str = ""
@@ -37,7 +39,7 @@ class Tool(ABC):
         super().__init_subclass__(**kwargs)
         if "input_schema" not in cls.__dict__:
             cls.input_schema = {}
-            
+
     @abstractmethod
     async def call(self, args: dict, context: ToolUseContext) -> ToolResult:
         pass
@@ -47,7 +49,7 @@ class Tool(ABC):
 
     def validate_input(self, args: dict) -> ValidationResult:
         return ValidationResult(valid=True)
-        
+
     async def aclose(self) -> None:
         """
         Close any resources held by this tool (e.g., httpx clients).
@@ -77,7 +79,9 @@ class Tool(ABC):
             },
         }
 
-    async def _maybe_truncate(self, data: str, url: str, context: ToolUseContext) -> tuple[str, bool, str | None]:
+    async def _maybe_truncate(
+        self, data: str, url: str, context: ToolUseContext
+    ) -> tuple[str, bool, str | None]:
         """
         If data exceeds max_result_size_chars, cache to disk and return preview.
 
@@ -89,6 +93,7 @@ class Tool(ABC):
 
         # Cache full content to disk
         import hashlib
+
         url_hash = hashlib.sha256(url.encode()).hexdigest()[:16]
         cached_path = context.cache_dir / f"{self.name}_{url_hash}.md"
         cached_path.write_text(data, encoding="utf-8")
@@ -148,7 +153,8 @@ class ToolRegistry:
                 await tool.aclose()
             except Exception:
                 pass
-        
+
+
 def build_default_registry(config: dict | None = None) -> ToolRegistry:
     """
     Build the default tool registry with all search tools.
@@ -159,7 +165,10 @@ def build_default_registry(config: dict | None = None) -> ToolRegistry:
         config: Optional dict of tool configuration from settings.yaml.
                 Keys like "web_search_default_results", "searxng_url", etc.
     """
+    from src.tools.academic_search import AcademicSearchTool
     from src.tools.cite_source import CiteSourceTool
+    from src.tools.deep_read import DeepReadTool
+    from src.tools.news_search import NewsSearchTool
     from src.tools.research_plan import ResearchPlanTool
     from src.tools.web_fetch import WebFetchTool
     from src.tools.web_search import WebSearchTool
@@ -178,6 +187,27 @@ def build_default_registry(config: dict | None = None) -> ToolRegistry:
         )
     )
     registry.register(
+        NewsSearchTool(
+            searxng_url=cfg.get("searxng_url", ""),
+            default_results=cfg.get("news_search_default_results", 5),
+            max_results=cfg.get("news_search_max_results", 10),
+            default_days_back=cfg.get("news_search_default_days_back", 7),
+            max_days_back=cfg.get("news_search_max_days_back", 30),
+            max_result_size_chars=cfg.get("max_result_size_chars", 15000),
+            http_timeout=cfg.get("http_timeout", 30),
+            engines=cfg.get("searxng_news_engines", ""),
+            language=cfg.get("searxng_language", "auto"),
+        )
+    )
+    registry.register(
+        AcademicSearchTool(
+            default_results=cfg.get("academic_search_default_results", 5),
+            max_results=cfg.get("academic_search_max_results", 10),
+            max_result_size_chars=cfg.get("max_result_size_chars", 20000),
+            http_timeout=cfg.get("http_timeout", 30),
+        )
+    )
+    registry.register(
         WebFetchTool(
             max_result_size_chars=cfg.get("max_result_size_chars", 50000),
             http_timeout=cfg.get("http_timeout", 30),
@@ -187,5 +217,50 @@ def build_default_registry(config: dict | None = None) -> ToolRegistry:
     )
     registry.register(CiteSourceTool())
     registry.register(ResearchPlanTool())
+    registry.register(DeepReadTool(max_result_size_chars=cfg.get("max_result_size_chars", 30000)))
     return registry
 
+
+def register_skill_tools(
+    registry: ToolRegistry,
+    settings: dict,
+    root: Path | None = None,
+) -> int:
+    """Register use_skill and run_skill_script when skills are enabled."""
+    skills_cfg = settings.get("skills", {})
+    if not skills_cfg.get("enabled", False):
+        return 0
+
+    try:
+        from src.skills.loader import load_skills
+        from src.tools.run_skill_script import RunSkillScriptTool
+        from src.tools.use_skill import UseSkillTool
+
+        skill_dirs = skills_cfg.get("dirs", ["./skills"])
+        if isinstance(skill_dirs, str):
+            skill_dirs = [skill_dirs]
+
+        loaded_skills = load_skills(skill_dirs, root=root or Path.cwd())
+        registry.register(
+            UseSkillTool(
+                skills=loaded_skills,
+                listing_max_chars=int(skills_cfg.get("listing_max_chars", 8000)),
+                max_skill_chars=int(skills_cfg.get("max_skill_chars", 50000)),
+            )
+        )
+        registry.register(
+            RunSkillScriptTool(
+                skills=loaded_skills,
+                default_timeout_seconds=int(skills_cfg.get("script_timeout_seconds", 30)),
+                max_output_chars=int(skills_cfg.get("script_max_output_chars", 20000)),
+            )
+        )
+        logger.info(
+            "Skills enabled: loaded=%d dirs=%s",
+            len(loaded_skills),
+            ", ".join(str(d) for d in skill_dirs),
+        )
+        return len(loaded_skills)
+    except Exception:
+        logger.warning("Failed to initialize skills", exc_info=True)
+        return 0

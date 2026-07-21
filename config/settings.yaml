@@ -1,0 +1,47 @@
+llm:
+  default_model: "qwen-plus"
+  side_query_model: "qwen-turbo"
+  fallback_model: "qwen-turbo"
+  max_tokens: 8192
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  side_query_base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  api_key: "sk-791f4ffe31b349d59801b5d921fbf8b2"
+  max_retries: 3
+  retry_base_delay_ms: 500
+  stream: true
+
+limits:
+  max_turns: 40
+  max_search: 30
+  max_fetch: 30
+  compact_threshold_tokens: 80000
+  rate_limit_per_domain: 30
+
+tools:
+  cache_dir: "./cache"
+  web_search_default_results: 10
+  web_search_max_results: 20
+  max_result_size_chars: 20000
+  http_timeout: 30
+  jina_timeout: 60
+  content_extraction_threshold: 15000
+
+hooks:
+  min_citations: 2
+  min_domains: 2
+  min_answer_chars: 200
+
+memory:
+  enabled: false
+  base_dir: "./memory"
+  max_relevant_memories: 5
+
+skills:
+  enabled: false
+  dirs: ["./skills"]
+
+server:
+  host: "127.0.0.1"
+  port: 8000
+  api_key: ""
+  cors_origins: ""

@@ -1,0 +1,55 @@
+# SearXNG for DeepsearchHarness (search_web tool).
+# Docs: https://docs.searxng.org/admin/installation-docker.html
+#
+# Usage:
+#   cd searxng
+#   cp .env.example .env
+#   docker compose up -d
+#
+# Harness default: http://127.0.0.1:8081 (config/settings.yaml → tools.searxng_url)
+#
+# Note: On WSL2 / Docker Desktop, avoid binding host ports to 127.0.0.1 only —
+# use "8081:8080" so curl from WSL does not get "connection reset by peer".
+
+name: deepsearch-searxng
+
+services:
+  core:
+    container_name: deepsearch-searxng
+    image: docker.io/searxng/searxng:${SEARXNG_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      valkey:
+        condition: service_healthy
+    ports:
+      - "${SEARXNG_HOST_PORT:-8081}:8080"
+    env_file: ./.env
+    environment:
+      SEARXNG_PORT: "8080"
+      SEARXNG_BIND_ADDRESS: "0.0.0.0"
+    volumes:
+      - ./core-config/:/etc/searxng/
+      - core-data:/var/cache/searxng/
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  valkey:
+    container_name: deepsearch-searxng-valkey
+    image: docker.io/valkey/valkey:9-alpine
+    command: valkey-server --save 30 1 --loglevel warning
+    restart: unless-stopped
+    volumes:
+      - valkey-data:/data/
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  core-data:
+  valkey-data:

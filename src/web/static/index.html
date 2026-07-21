@@ -1,85 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DeepsearchHarness</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 24px;
-      background: #f7f7f8;
-      color: #1a1a1a;
-    }
-    h1 { margin: 0 0 8px; font-size: 1.5rem; }
-    .sub { color: #666; margin-bottom: 20px; }
-    .status {
-      padding: 8px 12px;
-      border-radius: 8px;
-      background: #fff;
-      border: 1px solid #e5e5e5;
-      margin-bottom: 16px;
-      font-size: 0.9rem;
-    }
-    .status.ok { border-color: #86efac; }
-    .status.err { border-color: #fca5a5; }
-    form { display: flex; gap: 8px; margin-bottom: 16px; }
-    textarea {
-      flex: 1;
-      min-height: 72px;
-      padding: 12px;
-      border: 1px solid #d4d4d4;
-      border-radius: 8px;
-      resize: vertical;
-      font: inherit;
-    }
-    button {
-      padding: 0 20px;
-      border: none;
-      border-radius: 8px;
-      background: #2563eb;
-      color: #fff;
-      font: inherit;
-      cursor: pointer;
-    }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    #output {
-      background: #fff;
-      border: 1px solid #e5e5e5;
-      border-radius: 8px;
-      padding: 16px;
-      min-height: 200px;
-      white-space: pre-wrap;
-      line-height: 1.6;
-    }
-    .tool-line {
-      color: #555;
-      font-size: 0.9rem;
-      margin: 8px 0;
-      padding: 8px;
-      background: #f3f4f6;
-      border-radius: 6px;
-    }
-    .meta { color: #666; font-size: 0.85rem; margin-top: 16px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="hsl(53,28.6%,94.5%)">
+    <title>DeepsearchHarness</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <h1>DeepsearchHarness</h1>
-  <p class="sub">Web research agent — search, read, answer with citations.</p>
+    <div class="login-overlay" id="loginOverlay" style="display:none">
+        <div class="login-box">
+            <h2>DeepsearchHarness</h2>
+            <p>Enter password to continue</p>
+            <form onsubmit="doLogin(event)">
+                <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password">
+                <button type="submit" class="login-btn">Login</button>
+            </form>
+            <p class="login-error" id="loginError"></p>
+        </div>
+    </div>
 
-  <div id="status" class="status">Connecting...</div>
+    <div class="app" id="appContainer" style="display:none">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-top">
+                <button class="sidebar-btn new-chat-btn" onclick="startNewChat()" title="New chat">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                    <span>New research</span>
+                </button>
+            </div>
+            <div class="sidebar-history" id="sidebarHistory"></div>
+            <div class="sidebar-bottom">
+                <div class="sidebar-status">
+                    <span class="status-indicator" id="statusIndicator"></span>
+                    <span class="status-label" id="statusLabel">Connecting...</span>
+                </div>
+            </div>
+        </aside>
 
-  <form id="form">
-    <textarea id="query" placeholder="Ask anything..." autofocus></textarea>
-    <button type="submit" id="submit" disabled>Send</button>
-  </form>
+        <div class="main">
+            <div class="topbar">
+                <button class="topbar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+                </button>
+                <span class="topbar-title">DeepsearchHarness</span>
+                <span class="topbar-model" id="topbarModel"></span>
+            </div>
 
-  <div id="output"></div>
-  <div id="meta" class="meta"></div>
+            <div class="conversation" id="conversation">
+                <div class="welcome" id="welcomeScreen">
+                    <div class="welcome-content">
+                        <div class="welcome-icon welcome-icon-text">D</div>
+                        <h1>What would you like to search?</h1>
+                        <p class="welcome-sub">I'll search the web, read sources, and synthesize a well-cited answer.</p>
+                        <div class="suggestions">
+                            <button class="suggestion" onclick="submitExample(this)">What are the latest advances in quantum computing?</button>
+                            <button class="suggestion" onclick="submitExample(this)">Compare React, Vue, and Svelte for building web apps</button>
+                            <button class="suggestion" onclick="submitExample(this)">What causes aurora borealis and where to see them?</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="messages" id="messages" style="display:none;"></div>
+            </div>
 
-  <script src="/static/app.js"></script>
+            <div class="input-area">
+                <form class="input-form" id="queryForm" onsubmit="handleSubmit(event)">
+                    <div class="input-box" id="inputBox">
+                        <textarea id="queryInput" placeholder="Ask anything..." rows="1" autofocus></textarea>
+                        <button type="submit" class="send-btn" id="submitBtn" disabled>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                        </button>
+                    </div>
+                    <div class="input-hint">DeepsearchHarness uses AI to research the web. Verify important information.</div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script src="/static/app.js"></script>
 </body>
 </html>

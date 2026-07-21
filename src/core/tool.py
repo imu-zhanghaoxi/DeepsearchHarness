@@ -166,6 +166,7 @@ def build_default_registry(config: dict | None = None) -> ToolRegistry:
                 Keys like "web_search_default_results", "searxng_url", etc.
     """
     from src.tools.academic_search import AcademicSearchTool
+    from src.tools.ask_user import AskUserTool
     from src.tools.cite_source import CiteSourceTool
     from src.tools.deep_read import DeepReadTool
     from src.tools.news_search import NewsSearchTool
@@ -217,6 +218,7 @@ def build_default_registry(config: dict | None = None) -> ToolRegistry:
     )
     registry.register(CiteSourceTool())
     registry.register(ResearchPlanTool())
+    registry.register(AskUserTool())
     registry.register(DeepReadTool(max_result_size_chars=cfg.get("max_result_size_chars", 30000)))
     return registry
 

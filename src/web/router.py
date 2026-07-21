@@ -492,15 +492,37 @@ def create_app(settings: dict | None = None) -> FastAPI:
                 plan_findings = ""
                 citations_list: list = []
                 turn_count = 0
+                gen = query_loop(params)
+                sent_value: str | None = None
                 try:
-                    async for event in query_loop(params):
+                    while True:
+                        event = await gen.asend(sent_value)
+                        sent_value = None
+
                         if event.type == EventType.DONE:
                             event.data["session_id"] = session_id
                             final_answer = event.data.get("final_answer", "") or ""
                             plan_findings = event.data.get("plan_findings", "") or ""
                             citations_list = event.data.get("citations", [])
                             turn_count = event.data.get("turn_count", 0)
+
                         await ws.send_json(event.to_dict())
+
+                        if event.type == EventType.USER_QUESTION:
+                            try:
+                                raw_answer = await asyncio.wait_for(ws.receive_text(), timeout=120)
+                                answer_msg = json.loads(raw_answer)
+                                sent_value = answer_msg.get("answer", "")
+                            except asyncio.TimeoutError:
+                                logger.warning("User question timed out")
+                                sent_value = ""
+                            except (WebSocketDisconnect, Exception) as e:
+                                logger.warning(f"Error reading user answer: {e}")
+                                sent_value = ""
+                                break
+
+                except StopAsyncIteration:
+                    pass
                 except Exception as e:
                     logger.error(f"Query loop error: {e}", exc_info=True)
                     await ws.send_json({"type": "error", "data": {"message": str(e)}})

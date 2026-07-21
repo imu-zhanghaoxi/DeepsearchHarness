@@ -24,6 +24,7 @@ dev = [
     "httpx2>=2.0.0",
 ]
 browser = ["playwright>=1.49"]
+export = ["pypandoc>=1.13", "pypandoc_binary>=1.13"]
 
 [build-system]
 requires = ["hatchling"]
